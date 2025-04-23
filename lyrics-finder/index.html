@@ -1,0 +1,163 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lyrics Finder</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #fff3e0;
+      padding: 40px;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    .container {
+      background: #ffffff;
+      padding: 30px;
+      max-width: 600px;
+      margin: auto;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    input {
+      padding: 12px;
+      margin: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      width: 80%;
+      max-width: 250px;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      background-color: #fb8c00;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #ef6c00;
+    }
+    #lyrics {
+      margin-top: 20px;
+      white-space: pre-wrap;
+      background-color: #f7f9fc;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: left;
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #d9e2ec;
+    }
+    #loader {
+      display: none;
+      margin-top: 10px;
+      font-size: 14px;
+      color: #888;
+    }
+    #youtube-link {
+      margin-top: 10px;
+    }
+    #history {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #444;
+      text-align: left;
+    }
+    .history-item {
+      cursor: pointer;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Lyrics Finder 🎵</h1>
+    <input type="text" id="artist" placeholder="Artist name" />
+    <input type="text" id="title" placeholder="Song title" />
+    <br />
+    <button onclick="getLyrics()">Get Lyrics</button>
+    <div id="loader">Loading lyrics...</div>
+    <div id="lyrics"></div>
+    <div id="youtube-link"></div>
+    <div id="history"></div>
+  </div>
+
+  <script>
+    function updateHistory(artist, title) {
+      let history = JSON.parse(localStorage.getItem('lyricsHistory')) || [];
+      const newEntry = `${artist} - ${title}`;
+      if (!history.includes(newEntry)) {
+        history.unshift(newEntry);
+        if (history.length > 10) history.pop();
+        localStorage.setItem('lyricsHistory', JSON.stringify(history));
+      }
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const history = JSON.parse(localStorage.getItem('lyricsHistory')) || [];
+      const container = document.getElementById('history');
+      container.innerHTML = '<h4>Search History:</h4>' + history.map(item => `<div class='history-item' onclick="fillInputs('${item}')">${item}</div>`).join('');
+    }
+
+    function fillInputs(entry) {
+      const [artist, title] = entry.split(' - ');
+      document.getElementById('artist').value = artist;
+      document.getElementById('title').value = title;
+      getLyrics();
+    }
+
+    function getLyrics() {
+      const artist = document.getElementById('artist').value;
+      const title = document.getElementById('title').value;
+      const lyricsDiv = document.getElementById('lyrics');
+      const loader = document.getElementById('loader');
+      const youtubeLinkDiv = document.getElementById('youtube-link');
+
+      if (!artist || !title) {
+        alert("Please enter both artist and song title.");
+        return;
+      }
+
+      lyricsDiv.innerText = "";
+      youtubeLinkDiv.innerHTML = "";
+      loader.style.display = 'block';
+
+      const url = `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`;
+
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          loader.style.display = 'none';
+          if (data.lyrics) {
+            lyricsDiv.innerHTML = data.lyrics.replace(/\n/g, '<br>') + ` <button onclick="saveFavorite('${artist}', '${title}')">❤️</button>`;
+            const query = encodeURIComponent(`${artist} ${title}`);
+            youtubeLinkDiv.innerHTML = `<p><a href='https://www.youtube.com/results?search_query=${query}' target='_blank'>▶️ Listen on YouTube</a></p>`;
+            updateHistory(artist, title);
+          } else {
+            lyricsDiv.innerText = "Lyrics not found.";
+          }
+        })
+        .catch(error => {
+          loader.style.display = 'none';
+          lyricsDiv.innerText = "An error occurred.";
+          console.error(error);
+        });
+    }
+
+    function saveFavorite(artist, title) {
+      alert(`Favorited: ${artist} - ${title}`);
+    }
+
+    renderHistory();
+  </script>
+</body>
+</html>
